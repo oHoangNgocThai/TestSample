@@ -112,4 +112,147 @@ class EmailValidatorTest {
 
 ## Mockito Test
 
+* Mockito là một thư viện của JAVA dùng để test các ứng dụng code bằng Java. Nó được sử dụng để có thể tạo và sử dụng các đối tượng giả để cung cấp các đối tượng giả cung cấp phụ thuộc cho class đang được test.
+* Sau khi xây dựng việc test cho class EmailValidator, tiếp theo hãy giả lập để test được class SharedPreferenceHelper sau:
 
+```
+class SharedPreferencesHelper(private val mPreference: SharedPreferences) {
+
+    companion object {
+        const val KEY_NAME = "key_name"
+        const val KEY_DOB = "key_dob"
+        const val KEY_EMAIL = "key_email"
+    }
+
+    fun savePersonalInfo(userInfo: UserInfo): Boolean {
+        mPreference.edit()?.let { editor ->
+            editor.putString(KEY_NAME, userInfo.name)
+            editor.putLong(KEY_DOB, userInfo.dateOfBirth)
+            editor.putString(KEY_EMAIL, userInfo.email)
+
+            return editor.commit()
+        }
+        return false
+    }
+
+    fun getPersonalInfo(): UserInfo {
+        val name = mPreference.getString(KEY_NAME, "")
+        val dobMillisecond = mPreference.getLong(KEY_DOB, Calendar.getInstance().timeInMillis)
+        val email = mPreference.getString(KEY_EMAIL, "")
+
+        return UserInfo(name, dobMillisecond, email)
+    }
+}
+```
+
+* Như các bạn thấy, việc thực hiện test cho class trên sẽ trải qua bước khởi tạo đối tượng, sau đó sử dụng dữ liệu ghi vào SharedPreference và sau đó lại đọc dữ liệu ra để xem có giống nhau hay không.
+
+* Đầu tiên, phải tạo được đối tượng SharedPreference để thao tác trên đó. Ở đây sẽ sử dụng `when` có trong thư viện Mockito để phân biệt ra các trường hợp cụ thể trong đó.
+
+```
+private fun createMockSharedPreference(): SharedPreferencesHelper? {
+    // Mocking reading the SharedPreferences as if mMockSharedPreferences was previously written correctly.
+    `when`(mMockSharedPreferences?.getString(eq(SharedPreferencesHelper.KEY_NAME), anyString())).thenReturn(mUserInfo?.name)
+    `when`(mMockSharedPreferences?.getLong(eq(SharedPreferencesHelper.KEY_DOB), anyLong())).thenReturn(mUserInfo?.dateOfBirth)
+    `when`(mMockSharedPreferences?.getString(eq(SharedPreferencesHelper.KEY_EMAIL), anyString())).thenReturn(mUserInfo?.email)
+
+    // Mocking a successful commit.
+    `when`(mMockEditor?.commit()).thenReturn(true)
+
+    // Return the MockEditor when requesting it
+    `when`(mMockSharedPreferences?.edit()).thenReturn(mMockEditor)
+    return mMockSharedPreferencesHelper
+}
+
+private fun createMockBrokenSharedPreference(): SharedPreferencesHelper? {
+    `when`(mMockBrokenEditor?.commit()).thenReturn(false)
+
+    // Return the broken MockEditor when requesting it
+    `when`(mMockBrokenPreference?.edit()).thenReturn(mMockBrokenEditor)
+
+    return mMockBrokenPreference?.let { SharedPreferencesHelper(it) }
+}
+```
+> ở đây hàm **SharedPreferenceHelper** cần đối số là một đối tượng của **SharedPreference**, vì vậy chúng ta cần tạo ra đối số này với annotation **@Mock**. Lưu ý rằng chúng ta đang tạo ra 2 phiên bản của **SharedPrefenrece**, một trường hợp cho việc ghi thành công và một cho việc ghi thất bại. Việc ghi lại sai có thể là do cung cấp khóa sai, context sai, ...
+
+* Để khởi tạo được đối tượng trước khi xử lý các hàm test, phải lưu ý khởi tạo nó ở bước trên. Ở đây ta sử dụng annotation **@Before** để chỉ việc trước khi test sẽ thực hiện nó trước.
+
+```
+@Before
+fun initMocks() {
+    // create entity
+    mUserInfo = UserInfo(TEST_NAME, TEST_DATE_OF_BIRTH.timeInMillis, TEST_EMAIL)
+
+    // create a mocked SharedPreferences
+    mMockSharedPreferencesHelper = createMockSharedPreference()
+
+    // Create a mocked SharedPreferences that fails at saving data.
+    mMockBrokenSharedPreferencesHelper = createMockBrokenSharedPreference()
+}
+```
+
+* Khi đã chuẩn bị các đối tượng cần thiết một cách đầy đủ, chúng ta sẽ đến việc test bằng các hàm cụ thể như sau:
+
+```
+@RunWith(MockitoJUnitRunner::class)
+class SharedPreferencesHelperTest {
+
+    ...
+
+    @Before
+    fun initMocks() {
+        ...
+    }
+
+    @Test
+    fun sharedPreferencesHelper_SaveAndReadPersonalInfo() {
+        val success = mUserInfo?.let { mMockSharedPreferencesHelper?.savePersonalInfo(it) }
+
+        if (success != null) {
+            assertThat("Checking that SharedPreferenceEntry.save... returns true", success, `is`(true))
+        } else {
+            assertThat("Checking that SharedPreferenceEntry.save... returns true", success, equalTo(null))
+        }
+
+
+        if (mMockSharedPreferencesHelper != null) {
+            // Read personal information from SharedPreferences
+            val userInfo = mMockSharedPreferencesHelper?.getPersonalInfo()
+
+            // Make sure both written and retrieved personal information are equal.
+            assertThat("Checking that UserInfo.name has been persisted and read correctly", mUserInfo?.name, `is`(equalTo(userInfo?.name)))
+            assertThat("Checking that UserInfo.dateOfBirth has been persisted and read correctly", mUserInfo?.dateOfBirth, `is`(equalTo(userInfo?.dateOfBirth)))
+            assertThat("Checking that UserInfo.email has been persisted and read correctly", mUserInfo?.email, `is`(equalTo(userInfo?.email)))
+        }
+
+    }
+
+    @Test
+    fun sharedPreferencesHelper_SavePersonalInfoFailed_ReturnsFalse() {
+        // Read personal information from a broken
+
+        val success = mUserInfo?.let { mMockBrokenSharedPreferencesHelper?.savePersonalInfo(it) }
+
+        assertThat("Makes sure writing to a broken SharedPreferencesHelper returns false", success, `is`(false))
+    }
+
+
+    private fun createMockSharedPreference(): SharedPreferencesHelper? {
+        ...
+    }
+
+    private fun createMockBrokenSharedPreference(): SharedPreferencesHelper? {
+    ...
+    }
+}
+```
+
+* Ở trên đầu tiên sử dụng annotation **@RunWith** để hướng IDE khởi tạo thư viện Mockito, cũng có thể sử dụng thay thế là **MockitoAnnotations.initMocks( testClass )** trong phương thức có annotation **@Before**.
+
+* Sau đó các hàm dùng để test đều có annotation **@Test**, sau đó sử dụng các phương thức của JUnit:
+
+    * **assertThat()**: Cho phép bạn tạo ra các xác nhận tùy chỉnh, không chỉ là giá trị true hoặc false. Nó gồm 3 tham số là lý do miêu tả, giá trị ban đầu cần kiểm tra, giá trị thực tế.
+    * **Is()**: Trả về đối tượng Matcher sau cho khớp đối tượng nguồn với đối tượng được cung cấp vào phương thức.
+    * **equalTo()**: Kiểm tra sự bằng nhau của các đối tượng.
+    * **when()**: Đây là phương thức rất mạnh, gọi một phương thức làm tham số. Nó nhận bên trong phương thức được khai thác hoặc sao chép. Khi phương thức được thực thi, phương thức **then()** sẽ được gọi.
+    * **thenReturn()**: Nó được gọi khi đã chạy xong phương thức của **when()**. Nó được sử dụng để trả về kết quả của phương thức nếu nó không có giá trị. 
