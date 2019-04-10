@@ -10,13 +10,13 @@ Learn about Test in Android
 
 Vị trí của code test phụ thuộc vào loại test mà bạn đang viết. Android Studio cung cấp các thư mục source code cho 2 loại test:
 
-* `Local unit tests`: 
+* `Local unit tests`
 
     * Nằm trong thư mục **module-name/src/test/java/**
     * Là các test chạy trên JVM(Java Vitual Machine), sử dụng các test này để giảm thiểu thời gian thực hiện khi các test của bạn không phụ thuộc vào Android framework hoặc khi bạn có thể giả định phụ thuộc của Android Framework.
     * Trong khi chạy, các test này được thực hiện với phiên bản sử đổi của **android.jar**. Điều này cho phép bạn sử dụng các thư viện mocking, giống như **Mockito**.
     
-* `Instrumented tests`:
+* `Instrumented tests`
     
     * Nằm trong thư mục **module-name/src/androidTest/java/**.
     * Những bài test này chạy trên thiết bị thật hoặc là máy ảo. Các bài test này có quyền truy cập vào API của thiết bị, cung cấp cho bạn quyền truy cập các thông tin như Context đang kiểm tra và kiểm soát ứng dụng được test từ code test.
@@ -25,3 +25,4 @@ Vị trí của code test phụ thuộc vào loại test mà bạn đang viết.
 
 ## Add a new test
 
+* 
