@@ -4,7 +4,7 @@ import android.content.SharedPreferences
 import com.example.testsample.enity.UserInfo
 import java.util.*
 
-class SharedPreferencesHelper(val mPreference: SharedPreferences) {
+class SharedPreferencesHelper(private val mPreference: SharedPreferences) {
 
     companion object {
         const val KEY_NAME = "key_name"
@@ -13,7 +13,7 @@ class SharedPreferencesHelper(val mPreference: SharedPreferences) {
     }
 
     fun savePersonalInfo(userInfo: UserInfo): Boolean {
-        val editor = mPreference.edit()?.let { editor ->
+        mPreference.edit()?.let { editor ->
             editor.putString(KEY_NAME, userInfo.name)
             editor.putLong(KEY_DOB, userInfo.dateOfBirth)
             editor.putString(KEY_EMAIL, userInfo.email)

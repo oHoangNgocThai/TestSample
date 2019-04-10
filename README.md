@@ -23,6 +23,93 @@ Vị trí của code test phụ thuộc vào loại test mà bạn đang viết.
     * Thực hiện các bài test này khi viết tích hợp và kiểm tra giao diện để tự động hóa tương tác của người dùng hoặc các bài test khác phụ thuộc Android mà các đối tượng giả không thể tạo ra.
     * Bởi vì các bài test được tích hợp vào APK(tách biệt với APK ứng dụng của bạn), nên chúng ta phải có tệp **AndroidMenifest.xml** của riêng nó. Tuy nhiên Gradle tự động tạo tệp này trong quá trình xây dựng để nó không hiển thị trong source code của bạn. Nếu cần bạn có thể thêm tệp manifest vào thư mục test.
 
-## Add a new test
+## Create Local Test
 
-* 
+* Thêm dependency của **junit** và **mockito** vào trong project để sử dụng trong khi viết test.
+
+```
+testImplementation 'junit:junit:4.12'
+testImplementation 'org.mockito:mockito-core:1.10.19'
+```
+
+## JUnit Test
+
+* Ở đây có hàm kiểm tra xem chuỗi nhập vào có phải là định dạng Email hay không, sẽ viết Unit Test cho hàm này. 
+
+```
+class EmailValidator {
+
+    companion object {
+        private val EMAIL_PATTERN = Pattern.compile(
+                "[a-zA-Z0-9\\+\\.\\_\\%\\-\\+]{1,256}" +
+                        "\\@" +
+                        "[a-zA-Z0-9][a-zA-Z0-9\\-]{0,64}" +
+                        "(" +
+                        "\\." +
+                        "[a-zA-Z0-9][a-zA-Z0-9\\-]{0,25}" +
+                        ")+"
+        )
+
+        fun isValid(email: CharSequence?): Boolean {
+            return email != null && EMAIL_PATTERN.matcher(email).matches()
+        }
+    }
+}
+```
+
+* Trước khi viết test, phải xác định xem có những trường hợp nào của việc test trên, ở đây là check xem chuỗi nhập vào có phải là định dạng email không, sẽ có một số các trường hợp sau:
+
+    * Nhập vào đúng sẽ là: test@gmailcom
+    * Email có dạng subdomain: test@gmail.co.uk
+    * Không có .com: test@gmail
+    * Có nhiều ký tự: test@gmail..com
+    * Không có tên người dùng: @gmail.com
+    * Không có trường nhập vào
+    * Giá trị bị null
+
+* Tạo file EmailValidatorTest trong thư mục app/test/java/..., đây là thư mục chứa các test local unit test.
+
+```
+class EmailValidatorTest {
+
+    @Test
+    fun emailValidator_CorrectInput_ReturnsTrue() {
+        Assert.assertTrue(EmailValidator.isValid("name@email.com"))
+    }
+
+    @Test
+    fun emailValidator_CorrectEmailSubDomain_ReturnsTrue() {
+        Assert.assertTrue(EmailValidator.isValid("name@email.co.uk"))
+    }
+
+    @Test
+    fun emailValidator_InvalidEmailNoTld_ReturnsFalse() {
+        Assert.assertFalse(EmailValidator.isValid("name@email"))
+    }
+
+    @Test
+    fun emailValidator_InvalidEmailDoubleDot_ReturnsFalse() {
+        Assert.assertFalse(EmailValidator.isValid("name@email..com"))
+    }
+
+    @Test
+    fun emailValidator_InvalidEmailNoUsername_ReturnsFalse() {
+        Assert.assertFalse(EmailValidator.isValid("@email.com"))
+    }
+
+    @Test
+    fun emailValidator_NullEmail_ReturnsFalse() {
+        Assert.assertFalse(EmailValidator.isValid(null))
+    }
+}
+```
+
+* Một số chú ý có thể bạn chưa biết về các annotation trên:
+
+    * **@Test**: Được cung cấp bởi JUnit Framework để đánh dấu 1 phương thức là một trường hợp test.
+    * **assertTrue()**: Là một phương thức để khẳng định giá trị bên trong nó là TRUE. Nếu bên trong là sai thì đây là một test case sai.
+    * **assertFalse()**: Cũng tương tự như assertTrue, nếu trường hợp sai thì test đúng và ngược lại.
+
+## Mockito Test
+
+
